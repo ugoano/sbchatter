@@ -3,10 +3,34 @@
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1">
 		<title>WebRTC</title>
 		<style></style>
-		<script src="{{ static_url('js/lib/adapter.js') }}"></script>
+		<script src="{{ static_url('js/jquery.js') }}"></script>
+		<script src="{{ static_url('js/webrtc-adapter.js') }}"></script>
 	</head>
 	<body>
+		<div class="container">
+			<div class="videos">
+				<video />
+			</div>
+		</div>
 		<script>
+			navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+
+			var constraints = { video: true };
+
+			function successCallback(localMediaStream)
+			{
+				window.stream = localMediaStream; // Available to console
+				var video = $('video')[0];
+				video.src = window.URL.createObjectURL(localMediaStream);
+				video.play();
+			}
+
+			function errorCallback(error)
+			{
+				console.log("navigator.getUserMedia error: ", error);
+			}
+
+			navigator.getUserMedia(constraints, successCallback, errorCallback);
 		</script>
 	</body>
 </html>
