@@ -18,7 +18,7 @@ class MainHandler(RequestHandler):
 
 class WebRTCHandler(RequestHandler):
 	def get(self):
-		self.render('index2.html')
+		self.render('index3.html')
 
 
 class EchoWebSocket(WebSocketHandler):

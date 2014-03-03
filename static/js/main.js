@@ -2,6 +2,47 @@ var ws = new WebSocket('ws://' + location.host + ':7080/ws');
 var initiator;
 var pc;
 
+var sendChannel;
+
+var sendButton = $('#sendButton');
+sendButton.click(sendData());
+
+var sendTextarea = $('#dataChannelSend')[0];
+var receiveTextarea = $('#dataChannelReceive')[0];
+
+var localStream;
+var remoteStream;
+var isStarted;
+var turnReady;
+
+var pc_config = webrtcDetectedBrowser === 'firefox' ?
+	{'iceServers':[{'url':'stun:23.21.150.121'}]} : // number IP
+	{'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+
+var pc_constraints = {
+	'optional': [
+		{'DtlsSrtpKeyAgreement': true},
+		{'RtpDataChannels': true}
+	]
+};
+
+// Set up audio and video regardless of what devices are present.
+var sdpConstraints = {'mandatory': {
+	'OfferToReceiveAudio':true,
+	'OfferToReceiveVideo':true }};
+
+var room = location.pathname.substring(1);
+if (room === '') {
+	//  room = prompt('Enter room name:');
+	room = 'foo';
+} else {
+	//
+}
+
+function sendMessage() {
+	var data = $("#dataChannelSend").val();
+	sendChannel.send(data);
+}
 
 function call() {
     $('#btn-call').addClass('btn-active');
@@ -32,7 +73,20 @@ function init() {
 
 
 function connect(stream) {
-    pc = new RTCPeerConnection(null);
+    pc = new RTCPeerConnection(null, {optional: [{RtpDataChannels: true}]});
+	trace("Created local peer connection");
+	
+	try {
+		sendChannel = pc.createDataChannel("sendDataChannel", {reliable: false});
+		trace("Created send data channel");
+	} catch(e) {
+		alert('Failed to create data channel. ' +
+				'You need Chrome M25 or later with RtpDataChannel enabled');
+		trace('createDataChannel() failed with exception: ' + e.message);
+	}
+
+	sendChannel.onopen = handleSendChannelStateChange;
+	sendChannel.onclose = handleSendChannelStateChange;
     
     if (stream) {
         pc.addStream(stream);
@@ -58,7 +112,8 @@ function connect(stream) {
             }
         } else if (signal.candidate) {
             pc.addIceCandidate(new RTCIceCandidate(signal));
-        }
+        } else if (signal.message) {
+		}
     };
     
     if (initiator) {
@@ -120,6 +175,21 @@ function fail() {
     console.error.apply(console, arguments);
 }
 
+function handleSendChannelStateChange() {
+	var readyState = sendChannel.readyState;
+	trace('Send channel state is: ' + readyState);
+	if (readyState == "open") {
+		dataChannelSend.disabled = false;
+		dataChannelSend.focus();
+		dataChannelSend.placeholder = "";
+		sendButton.disabled = false;
+		closeButton.disabled = false;
+	} else {
+		dataChannelSend.disabled = true;
+		sendButton.disabled = true;
+		closeButton.disabled = true;
+	}
+}
 
 jQuery.fn.attachStream = function(stream) {
     this.each(function() {
