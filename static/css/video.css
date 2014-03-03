@@ -1,0 +1,28 @@
+video {
+	filter: hue-rotate(180deg) saturate(200%);
+	-moz-filter: hue-rotate(180deg) saturate(200%);
+	-webkit-filter: hue-rotate(180deg) saturate(200%);
+
+	width: 45%;
+}
+
+button {
+	font-size: 2em;
+	width: 300px;
+}
+
+#buttons {
+	text-align: center;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+@media all and (max-width: 800px) {
+	video {
+		width: 90%;
+	}
+
+	button {
+		width: 100%;
+	}
+}
