@@ -39,6 +39,23 @@ class EchoWebSocket(WebSocketHandler):
 		logging.info('WebSocket closed')
 		EchoWebSocket.clients.remove(self)
 
+class SignallingHandler(WebSocketHandler):
+	clients = []
+
+	def open(self):
+		logging.info('WebSocket opened from %s', self.request.remote_ip)
+		SignallingHandler.clients.append(self)
+	
+	def on_message(self, message):
+		logging.info('got message from %s: %s', self.request.remote_ip, message)
+		for client in SignallingHandler.clients:
+			if client is not self:
+				client.write_message(message)
+	
+	def on_close(self):
+		logging.info('WebSocket closed')
+		SignallingHandler.clients.remove(self)
+
 
 def main():
 	define('listen', metavar='IP', default='127.0.0.1', help='listen on IP address (default 127.0.0.1)')
@@ -59,6 +76,7 @@ def main():
 	application = Application([
 		(r'/', MainHandler),
 		(r'/ws', EchoWebSocket),
+		(r'/websocket', SignallingHandler),
 		(r'/webrtc', WebRTCHandler)
 		], **settings)
 
