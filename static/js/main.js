@@ -19,8 +19,8 @@ var stunUrl = webrtcDetectedBrowser === 'firefox'
 
 var pc_config =
     {'iceServers':[
-        {'url': stunUrl},
-        {'url': 'turn:ec2-54-216-248-168.eu-west-1.compute.amazonaws.com'}
+        {'url': stunUrl}
+        // {'url': 'turn:ec2-54-216-248-168.eu-west-1.compute.amazonaws.com'}
     ]};
 
 var pc_constraints = {
