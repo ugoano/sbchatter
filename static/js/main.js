@@ -14,9 +14,14 @@ var remoteStream;
 var isStarted;
 var turnReady;
 
-var pc_config = webrtcDetectedBrowser === 'firefox' ?
-	{'iceServers':[{'url':'stun:23.21.150.121'}]} : // number IP
-	{'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
+var stunUrl = webrtcDetectedBrowser === 'firefox'
+    ? 'stun:23.21.150.121' : 'stun:stun.l.google.com:19302';
+
+var pc_config =
+    {'iceServers':[
+        {'url': stunUrl},
+        {'url': 'turn:ec2-54-216-248-168.eu-west-1.compute.amazonaws.com'}
+    ]};
 
 var pc_constraints = {
 	'optional': [
@@ -70,9 +75,10 @@ function init() {
         audio: $('#audio').prop('checked'),
         video: $('#video').prop('checked')
     };
-    
+
     if (constraints.audio || constraints.video) {
         getUserMedia(constraints, connect, fail);
+        requestTurn();
     } else {
         connect();
     }
@@ -82,12 +88,12 @@ function init() {
 function connect(stream) {
     pc = new RTCPeerConnection(pc_config, pc_constraints);
 	trace("Created local peer connection");
-	
+
     if (stream) {
         pc.addStream(stream);
         $('#local').attachStream(stream);
     }
-    
+
     pc.onaddstream = function(event) {
         $('#remote').attachStream(event.stream);
         logStreaming(true);
@@ -111,7 +117,7 @@ function connect(stream) {
 		}
 		sendChannel.onopen = handleSendChannelStateChange;
 		sendChannel.onclose = handleSendChannelStateChange;
-    
+
 	} else {
 		pc.ondatachannel = gotReceiveChannel;
 	}
@@ -129,7 +135,7 @@ function connect(stream) {
         } else if (signal.message) {
 		}
     };
-    
+
     if (initiator) {
         createOffer();
     } else {
@@ -171,6 +177,16 @@ function receiveAnswer(answer) {
     pc.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
+function requestTurn() {
+  var turnExists = false;
+  for (var i in pc_config.iceServers) {
+    if (pc_config.iceServers[i].url.substr(0, 5) === 'turn:') {
+      turnExists = true;
+      turnReady = true;
+      break;
+    }
+  }
+}
 
 function log() {
     $('#status').text(Array.prototype.join.call(arguments, ' '));
