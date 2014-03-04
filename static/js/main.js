@@ -39,6 +39,8 @@ if (room === '') {
 	//
 }
 
+
+
 function sendMessage() {
 	var data = $("#dataChannelSend").val();
 	sendChannel.send(data);
@@ -73,7 +75,7 @@ function init() {
 
 
 function connect(stream) {
-    pc = new RTCPeerConnection(null, {optional: [{RtpDataChannels: true}]});
+    pc = new RTCPeerConnection(pc_config, pc_constraints);
 	trace("Created local peer connection");
 	
 	try {
