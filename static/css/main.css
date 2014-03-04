@@ -1,17 +1,8 @@
-video#remote {
-    width: 480px;
-    height: 360px;
-    background: #777;
-}
 
-video#local {
-    position: absolute;
-    width: 160px;
-    height: 120px;
+video {
+    width: 320px;
+    height: 240px;
     background: #555;
-    bottom: 0;
-    right: 0;
-    margin-bottom: 6px;
 }
 
 footer {
@@ -29,8 +20,19 @@ footer {
     margin-right: auto;
 }
 
+.videocontainer {
+	overflow-x: hidden;
+	width: 790px;
+	height: 250px;
+}
+
 .videos {
-    position: relative;
+	height: 100%;
+}
+
+.videos > div {
+	display: inline-block;
+	width: 370px;
 }
 
 .error {
