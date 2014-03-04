@@ -4,11 +4,10 @@ var pc;
 
 var sendChannel;
 
-var sendButton = $('#sendButton');
-sendButton.click(sendData());
+var sendButton = document.getElementById('sendButton');
 
-var sendTextarea = $('#dataChannelSend')[0];
-var receiveTextarea = $('#dataChannelReceive')[0];
+var sendTextarea = document.getElementById('dataChannelSend');
+var receiveTextarea = document.getElementById('dataChannelReceive');
 
 var localStream;
 var remoteStream;
@@ -41,9 +40,10 @@ if (room === '') {
 
 
 
-function sendMessage() {
+function sendData() {
 	var data = $("#dataChannelSend").val();
 	sendChannel.send(data);
+	trace('Sent data: ' + data);
 }
 
 function call() {
@@ -61,6 +61,11 @@ function receive() {
 
 
 function init() {
+	sendButton = $('#sendButton')[0];
+	$('#sendButton').click(sendData);
+	sendTextarea = $('#dataChannelSend')[0];
+	receiveTextarea = $('#dataChannelReceive')[0];
+
     var constraints = {
         audio: $('#audio').prop('checked'),
         video: $('#video').prop('checked')
@@ -78,18 +83,6 @@ function connect(stream) {
     pc = new RTCPeerConnection(pc_config, pc_constraints);
 	trace("Created local peer connection");
 	
-	try {
-		sendChannel = pc.createDataChannel("sendDataChannel", {reliable: false});
-		trace("Created send data channel");
-	} catch(e) {
-		alert('Failed to create data channel. ' +
-				'You need Chrome M25 or later with RtpDataChannel enabled');
-		trace('createDataChannel() failed with exception: ' + e.message);
-	}
-
-	sendChannel.onopen = handleSendChannelStateChange;
-	sendChannel.onclose = handleSendChannelStateChange;
-    
     if (stream) {
         pc.addStream(stream);
         $('#local').attachStream(stream);
@@ -104,6 +97,25 @@ function connect(stream) {
             ws.send(JSON.stringify(event.candidate));
         }
     };
+
+	if(initiator) {
+		try {
+			// Reliable data channels not supported by Chrome
+			sendChannel = pc.createDataChannel("sendDataChannel", {reliable: false});
+			sendChannel.onmessage = handleMessage;
+			trace("Created send data channel");
+		} catch(e) {
+			alert('Failed to create data channel. ' +
+					'You need Chrome M25 or later with RtpDataChannel enabled');
+			trace('createDataChannel() failed with exception: ' + e.message);
+		}
+		sendChannel.onopen = handleSendChannelStateChange;
+		sendChannel.onclose = handleSendChannelStateChange;
+    
+	} else {
+		pc.ondatachannel = gotReceiveChannel;
+	}
+
     ws.onmessage = function (event) {
         var signal = JSON.parse(event.data);
         if (signal.sdp) {
@@ -135,7 +147,7 @@ function createOffer() {
             log('sending to remote...');
             ws.send(JSON.stringify(offer));
         }, fail);
-    }, fail);
+    }, fail, sdpConstraints);
 }
 
 
@@ -149,7 +161,7 @@ function receiveOffer(offer) {
                 log('sent answer');
                 ws.send(JSON.stringify(answer));
             }, fail);
-        }, fail);
+        }, fail, sdpConstraints);
     }, fail);
 }
 
@@ -177,20 +189,42 @@ function fail() {
     console.error.apply(console, arguments);
 }
 
-function handleSendChannelStateChange() {
-	var readyState = sendChannel.readyState;
-	trace('Send channel state is: ' + readyState);
-	if (readyState == "open") {
+function gotReceiveChannel(event) {
+	trace('Received Channel Callback');
+	sendChannel = event.channel;
+	sendChannel.onmessage = handleMessage;
+	sendChannel.onopen = handleReceiveChannelStateChange;
+	sendChannel.onclose = handleReceiveChannelStateChange;
+}
+
+function enableMessageInterface(shouldEnable) {
+	if (shouldEnable) {
 		dataChannelSend.disabled = false;
 		dataChannelSend.focus();
 		dataChannelSend.placeholder = "";
 		sendButton.disabled = false;
-		closeButton.disabled = false;
 	} else {
 		dataChannelSend.disabled = true;
 		sendButton.disabled = true;
-		closeButton.disabled = true;
 	}
+}
+
+function handleSendChannelStateChange() {
+	var readyState = sendChannel.readyState;
+	trace('Send channel state is: ' + readyState);
+	enableMessageInterface(readyState == "open");
+}
+
+function handleReceiveChannelStateChange() {
+	var readyState = sendChannel.readyState;
+	trace('Receive channel state is: ' + readyState);
+	enableMessageInterface(readyState == "open");
+}
+
+
+function handleMessage(event) {
+	trace('Received message: ' + event.data);
+	receiveTextarea.value = event.data;
 }
 
 jQuery.fn.attachStream = function(stream) {
