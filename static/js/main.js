@@ -78,7 +78,7 @@ function init() {
 
     if (constraints.audio || constraints.video) {
         getUserMedia(constraints, connect, fail);
-        requestTurn();
+        requestTurn('https://computeengineondemand.appspot.com/turn?username=41784574&key=4080218913');
     } else {
         connect();
     }
@@ -177,7 +177,7 @@ function receiveAnswer(answer) {
     pc.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
-function requestTurn() {
+function requestTurn(turn_url) {
   var turnExists = false;
   for (var i in pc_config.iceServers) {
     if (pc_config.iceServers[i].url.substr(0, 5) === 'turn:') {
@@ -186,6 +186,25 @@ function requestTurn() {
       break;
     }
   }
+  if (!turnExists) {
+    console.log('Getting TURN server from ', turn_url);
+    // No TURN server. Get one from computeengineondemand.appspot.com:
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function(){
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        var turnServer = JSON.parse(xhr.responseText);
+        console.log('Got TURN server: ', turnServer);
+        pc_config.iceServers.push({
+          'url': 'turn:' + turnServer.username + '@' + turnServer.turn,
+          'credential': turnServer.password
+        });
+        turnReady = true;
+      }
+    };
+    xhr.open('GET', turn_url, true);
+    xhr.send();
+  }
+
 }
 
 function log() {
