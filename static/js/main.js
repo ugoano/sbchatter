@@ -1,6 +1,6 @@
 var ws = new WebSocket('ws://' + location.host + ':7080/ws');
 var initiator;
-var pc;
+//var pc;
 
 var sendChannel;
 
@@ -11,7 +11,9 @@ var receiveTextarea = document.getElementById('dataChannelReceive');
 
 var localStream;
 var remoteStream;
+
 var isStarted;
+var isChannelReady;
 var turnReady;
 
 var pc_config = webrtcDetectedBrowser === 'firefox' ?
@@ -52,11 +54,14 @@ function call() {
     init();
 }
 
-
 function receive() {
     $('#btn-receive').addClass('btn-active');
     initiator = false;
     init();
+}
+
+function join() {
+	ws.send('{"join":"blah"}');
 }
 
 
@@ -78,18 +83,28 @@ function init() {
     }
 }
 
+var count = 0;
 
 function connect(stream) {
-    pc = new RTCPeerConnection(pc_config, pc_constraints);
+    var pc = new RTCPeerConnection(pc_config, pc_constraints);
 	trace("Created local peer connection");
 	
     if (stream) {
         pc.addStream(stream);
-        $('#local').attachStream(stream);
+		if(count < 1)
+			$('#local').attachStream(stream);
     }
     
     pc.onaddstream = function(event) {
-        $('#remote').attachStream(event.stream);
+		if(count == 1) {
+			attachMediaStream($('#remote2')[0], event.stream);
+			//$('#remote2').attachStream(event.stream);
+		}
+		else {
+			attachMediaStream($('#remote')[0], event.stream);
+			//$('#remote').attachStream(event.stream);
+			count++;
+		}
         logStreaming(true);
     };
     pc.onicecandidate = function(event) {
@@ -119,19 +134,25 @@ function connect(stream) {
     ws.onmessage = function (event) {
         var signal = JSON.parse(event.data);
         if (signal.sdp) {
-            if (initiator) {
-                receiveAnswer(signal);
+            if (initiator && count == 1) {
+                receiveAnswer(signal, pc);
             } else {
-                receiveOffer(signal);
+                receiveOffer(signal, pc);
             }
-        } else if (signal.candidate) {
+        } else if (signal.candidate && count == 1) {
             pc.addIceCandidate(new RTCIceCandidate(signal));
-        } else if (signal.message) {
+        } else if (signal.join) {
+			receive();
+			console.log("Receiving call");
+			ws.send('{"answer":"yes"}');
+		} else if (signal.answer) {
+			console.log("Answering call");
+			call();
 		}
     };
     
     if (initiator) {
-        createOffer();
+        createOffer(pc);
     } else {
         log('waiting for offer...');
     }
@@ -139,7 +160,7 @@ function connect(stream) {
 }
 
 
-function createOffer() {
+function createOffer(pc) {
     log('creating offer...');
     pc.createOffer(function(offer) {
         log('created offer...');
@@ -151,7 +172,7 @@ function createOffer() {
 }
 
 
-function receiveOffer(offer) {
+function receiveOffer(offer, pc) {
     log('received offer...');
     pc.setRemoteDescription(new RTCSessionDescription(offer), function() {
         log('creating answer...');
@@ -166,7 +187,7 @@ function receiveOffer(offer) {
 }
 
 
-function receiveAnswer(answer) {
+function receiveAnswer(answer, pc) {
     log('received answer');
     pc.setRemoteDescription(new RTCSessionDescription(answer));
 }

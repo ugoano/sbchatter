@@ -15,19 +15,20 @@ footer {
 }
 
 .container {
-    width: 480px;
+    width: 1000px;
     margin-left: auto;
     margin-right: auto;
 }
 
 .videocontainer {
-	overflow-x: hidden;
-	width: 790px;
+	overflow-x: scroll;
+	width: 1000px;
 	height: 250px;
 }
 
 .videos {
 	height: 100%;
+	width: 2000px;
 }
 
 .videos > div {
